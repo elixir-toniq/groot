@@ -1,23 +1,17 @@
 defmodule Groot.Storage do
   @moduledoc false
-  # This module provides a server for maintaining flags. It monitors node
-  # connects in order to propogate existing flag information. Currently it
-  # manages the ets table we're using for holding the value for each flag.
-  # This isn't a great design because if we crash we lose the ets table.
-  # We should make that ets table public and move its creation to a supervisor
-  # or application start.
+  # This module provides a genserver for maintaining registers. It monitors
+  # node connects in order to propogate existing registers.
 
   use GenServer
 
-  alias Groot.Flags
   alias Groot.Register
 
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
-  # Lookup the percentage for a flag. This is done in the client process in order
-  # to speed up lookups and not cause a bottleneck.
+  # Lookup the value for the key in ets. Return nil otherwise
   def get(key) do
     case :ets.lookup(__MODULE__, key) do
       [] ->

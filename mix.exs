@@ -24,9 +24,8 @@ defmodule Groot.MixProject do
   defp deps do
     [
       {:hlclock, "~> 1.0"},
-
       {:local_cluster, "~> 1.0", only: [:dev, :test]},
-      {:schism, "~> 1.0", only: [:dev, :test]},
+      {:schism, "~> 1.0", only: [:dev, :test]}
     ]
   end
 
