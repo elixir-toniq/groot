@@ -2,7 +2,7 @@ defmodule Groot do
   @moduledoc """
   Groot provides an eventually consistent, ephemeral KV store. It relies on
   distributed erlang and uses LWW-registers and Hybrid-logical clocks
-  to provide maximum availability. Groot utilizes ETS for efficient reading.
+  to ensure maximum availability. Groot utilizes ETS for efficient reading.
 
   ## Usage
 
@@ -14,23 +14,23 @@ defmodule Groot do
   "value" = Groot.get(:key)
   ```
 
-  Updates will replicate to all connected nodes. If new nodes join, or if a node
+  Updates will replicate to all connected nodes. If a new node joins, or if a node
   rejoins the cluster after a network partition then the other nodes in the
-  cluster will replicate all of their known registers to the new node.
+  cluster will replicate all of their registers to the new node.
 
   ## Consistency
 
-  Groot provides LWW registers. Each register includes a hybrid logical clock (HLC).
-  Ordering of events is determined by comparing HLCs. If a network partition
-  occurs nodes on either side of the partition will continue to accept `set` and
-  `get` operations. Once the partition heals all registers will be replicated to
-  all nodes. If there are any conflicts the register with the largest HLC will
-  be chosen.
+  Groot uses LWW register CRDTs for storing values. Each register includes a
+  hybrid logical clock (HLC). Ordering of events is determined by comparing HLCs.
+  If a network partition occurs nodes on either side of the partition will
+  continue to accept `set` and `get` operations. Once the partition heals, all
+  registers will be replicated to all nodes. If there are any conflicts, the
+  register with the largest HLC will be chosen.
 
-  Its possible that Groot will lose writes under specific failures scenarios.
-  For instance, if there is a network partition between 2 nodes, neither node
-  will be able to replicate to the other. If either node crashes after accepting
-  a write, that write will be lost.
+  Groot may lose writes under specific failures scenarios. For instance, if
+  there is a network partition between 2 nodes, neither node will be able to
+  replicate to the other. If either node crashes after accepting a write, that
+  write will be lost.
 
   ## Data limitations
 

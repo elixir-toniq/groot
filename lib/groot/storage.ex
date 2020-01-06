@@ -1,7 +1,9 @@
 defmodule Groot.Storage do
   @moduledoc false
   # This module provides a genserver for maintaining registers. It monitors
-  # node connects in order to propogate existing registers.
+  # node connects in order to propagate existing registers.
+  # TODO: This genserver is a bottleneck on the system. We should really try
+  # to resolve this and move more work into the calling process in the future.
 
   use GenServer
 
@@ -22,7 +24,7 @@ defmodule Groot.Storage do
     end
   end
 
-  # The main api for setting the activation percentage of a flag.
+  # The main api for setting a keys value
   def set(key, value) do
     GenServer.call(__MODULE__, {:set, key, value})
   end
