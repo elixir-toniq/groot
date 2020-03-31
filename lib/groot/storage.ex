@@ -10,12 +10,13 @@ defmodule Groot.Storage do
   alias Groot.Register
 
   def start_link(args) do
-    GenServer.start_link(__MODULE__, args, name: __MODULE__)
+    args = Keyword.fetch!(args, :name)
+    GenServer.start_link(__MODULE__, args, name: server_name(name))
   end
 
   # Lookup the value for the key in ets. Return nil otherwise
-  def get(key) do
-    case :ets.lookup(__MODULE__, key) do
+  def get(server, key) do
+    case :ets.lookup(server_name(server), key) do
       [] ->
         nil
 
@@ -25,38 +26,39 @@ defmodule Groot.Storage do
   end
 
   # The main api for setting a keys value
-  def set(key, value) do
-    GenServer.call(__MODULE__, {:set, key, value})
+  def set(server, key, value) do
+    GenServer.call(server, {:set, key, value})
   end
 
   # Deletes all keys in the currently connected cluster. This is only
   # intended to be used in development and test
-  def delete_all() do
-    GenServer.multi_call(__MODULE__, :delete_all)
+  def delete_all(server) do
+    GenServer.multi_call(server, :delete_all)
   end
 
-  def init(_args) do
+  def init(args) do
+    name = Keyword.fetch!(args, :name)
     :net_kernel.monitor_nodes(true)
-    tab = __MODULE__ = :ets.new(__MODULE__, [:named_table, :set, :protected])
+    ^name = __MODULE__ = :ets.new(name, [:named_table, :set, :protected])
     registers = %{}
     schedule_sync_timeout()
 
-    {:ok, %{table: tab, registers: registers}}
+    {:ok, %{name: name, registers: registers}}
   end
 
   def handle_call({:set, key, value}, _from, data) do
     registers = Map.update(data.registers, key, Register.new(key, value), fn reg ->
       Register.update(reg, value)
     end)
-    :ets.insert(data.table, {key, registers[key].value})
-    GenServer.abcast(__MODULE__, {:update_register, registers[key]})
+    :ets.insert(data.name, {key, registers[key].value})
+    GenServer.abcast(data.name, {:update_register, registers[key]})
 
     {:reply, :ok, %{data | registers: registers}}
   end
 
   def handle_call(:delete_all, _from, data) do
     registers = %{}
-    :ets.delete_all_objects(data.table)
+    :ets.delete_all_objects(data.name)
 
     {:reply, :ok, %{data | registers: registers}}
   end
@@ -65,7 +67,7 @@ defmodule Groot.Storage do
     registers = Map.update(data.registers, reg.key, reg, fn existing_reg ->
       Register.latest(reg, existing_reg)
     end)
-    :ets.insert(data.table, {reg.key, registers[reg.key].value})
+    :ets.insert(data.name, {reg.key, registers[reg.key].value})
     {:noreply, %{data | registers: registers}}
   end
 
@@ -73,7 +75,7 @@ defmodule Groot.Storage do
     new_registers = merge(data.registers, registers)
 
     for {key, reg} <- new_registers do
-      :ets.insert(data.table, {key, reg.value})
+      :ets.insert(data.name, {key, reg.value})
     end
 
     {:noreply, %{data | registers: new_registers}}
@@ -82,11 +84,11 @@ defmodule Groot.Storage do
   def handle_info(msg, data) do
     case msg do
       {:nodeup, node} ->
-        GenServer.cast({__MODULE__, node}, {:update_registers, data.registers})
+        GenServer.cast({data.name, node}, {:update_registers, data.registers})
         {:noreply, data}
 
       :sync_timeout ->
-        GenServer.abcast(__MODULE__, {:update_registers, data.registers})
+        GenServer.abcast(data.name, {:update_registers, data.registers})
         schedule_sync_timeout()
         {:noreply, data}
 
@@ -110,5 +112,9 @@ defmodule Groot.Storage do
     keys
     |> Enum.map(fn key -> {key, Register.latest(r1[key], r2[key])} end)
     |> Enum.into(%{})
+  end
+
+  defp server_name(name) do
+    :"#{name}.#{__MODULE__}"
   end
 end

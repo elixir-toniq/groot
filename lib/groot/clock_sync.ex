@@ -11,7 +11,8 @@ defmodule Groot.ClockSync do
   alias __MODULE__
 
   def start_link(args) do
-    GenServer.start_link(__MODULE__, args, name: __MODULE__)
+    name = Keyword.fetch!(args, :name)
+    GenServer.start_link(__MODULE__, args, name: server_name(name))
   end
 
   def sync_remote_clock(server, hlc) do
@@ -20,6 +21,7 @@ defmodule Groot.ClockSync do
 
   def init(args) do
     data = %{
+      name: Keyword.fetch!(args, :name),
       sync_interval: Keyword.fetch!(args, :sync_interval),
       clock: Keyword.fetch!(args, :clock),
     }
@@ -43,7 +45,7 @@ defmodule Groot.ClockSync do
       nodes ->
         node = Enum.random(nodes)
         {:ok, hlc} = HLClock.send_timestamp(data.clock)
-        ClockSync.sync_remote_clock({ClockSync, node}, hlc)
+        sync_remote_clock({server_name(data.name), node}, hlc)
         schedule_sync(data)
         {:noreply, data}
     end
@@ -55,5 +57,9 @@ defmodule Groot.ClockSync do
 
   defp schedule_sync(%{sync_interval: interval}) do
     Process.send_after(self(), :sync, interval)
+  end
+
+  defp server_name(name) do
+    :"#{name}.#{__MODULE__}"
   end
 end

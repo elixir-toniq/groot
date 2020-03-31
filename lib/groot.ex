@@ -44,15 +44,15 @@ defmodule Groot do
   @doc """
   Gets a register's value. If the register is not found it returns `nil`.
   """
-  def get(key) do
-    Storage.get(key)
+  def get(server, key) do
+    Storage.get(server, key)
   end
 
   @doc """
   Sets the value for a register.
   """
-  def set(key, value) do
-    Storage.set(key, value)
+  def set(server, key, value) do
+    Storage.set(server, key, value)
   end
 end
 
