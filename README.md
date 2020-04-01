@@ -1,9 +1,5 @@
 # Groot
 
-I am Groot.
-
-## Usage
-
 Groot provides a distributed KV store for ephemeral data. It utilizes LWW-register
 CRDTs and Hybrid-Logical clocks to ensure availability and a level
 of consistency. For technical information on Groot's implementation, please
