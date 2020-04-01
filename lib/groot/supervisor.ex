@@ -12,13 +12,21 @@ defmodule Groot.Supervisor do
     node_id = gen_node_id()
 
     children = [
-      {HLClock, name: :"#{name}.Groot.Clock", node_id: node_id},
-      {Groot.ClockSync, [name: name, sync_interval: 3_000, clock: :"#{name}.Groot.Clock"]},
-      {Groot.Storage, [name: name]}
+      {HLClock, name: clock_name(name), node_id: node_id},
+      {Groot.ClockSync, [
+        name: clock_sync_name(name),
+        sync_interval: 3_000,
+        clock: clock_name(name),
+      ]},
+      {Groot.Storage, [name: storage_name(name)]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
+
+  defp clock_name(name), do: :"#{name}.Groot.Clock"
+  defp clock_sync_name(name), do: :"#{name}.Groot.ClockSync"
+  defp storage_name(name), do: :"#{name}.Groot.Storage"
 
   defp gen_node_id do
     8

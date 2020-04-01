@@ -10,13 +10,13 @@ defmodule Groot.Storage do
   alias Groot.Register
 
   def start_link(args) do
-    args = Keyword.fetch!(args, :name)
-    GenServer.start_link(__MODULE__, args, name: server_name(name))
+    name = Keyword.fetch!(args, :name)
+    GenServer.start_link(__MODULE__, args, name: name)
   end
 
   # Lookup the value for the key in ets. Return nil otherwise
-  def get(server, key) do
-    case :ets.lookup(server_name(server), key) do
+  def get(server_name, key) do
+    case :ets.lookup(server_name, key) do
       [] ->
         nil
 
@@ -39,7 +39,7 @@ defmodule Groot.Storage do
   def init(args) do
     name = Keyword.fetch!(args, :name)
     :net_kernel.monitor_nodes(true)
-    ^name = __MODULE__ = :ets.new(name, [:named_table, :set, :protected])
+    ^name = :ets.new(name, [:named_table, :set, :protected])
     registers = %{}
     schedule_sync_timeout()
 
@@ -112,9 +112,5 @@ defmodule Groot.Storage do
     keys
     |> Enum.map(fn key -> {key, Register.latest(r1[key], r2[key])} end)
     |> Enum.into(%{})
-  end
-
-  defp server_name(name) do
-    :"#{name}.#{__MODULE__}"
   end
 end

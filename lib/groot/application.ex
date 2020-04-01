@@ -4,12 +4,12 @@ defmodule Groot.Application do
   use Application
 
   def start(_type, _args) do
-    node_id = gen_node_id()
+    # node_id = gen_node_id()
 
     children = [
-      {HLClock, name: Groot.Clock, node_id: node_id},
-      {Groot.ClockSync, [sync_interval: 3_000, clock: Groot.Clock]},
-      {Groot.Storage, []}
+      # {HLClock, name: Groot.Clock, node_id: node_id},
+      # {Groot.ClockSync, [sync_interval: 3_000, clock: Groot.Clock]},
+      # {Groot.Storage, []}
     ]
 
     opts = [strategy: :one_for_one, name: Groot.Supervisor]

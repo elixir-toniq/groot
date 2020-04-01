@@ -3,14 +3,20 @@ defmodule GrootTest do
   doctest Groot
 
   setup_all do
-    Application.ensure_all_started(:groot)
+    # Application.ensure_all_started(:groot)
     nodes = LocalCluster.start_nodes("groot", 2)
+
+    for node <- nodes do
+      :rpc.call(node, Groot, :start_link, [[name: TestGroot]])
+    end
+
+    Groot.start_link(name: TestGroot)
 
     {:ok, nodes: nodes}
   end
 
   setup do
-    Groot.Storage.delete_all()
+    Groot.delete_all(TestGroot)
 
     :ok
   end
@@ -18,11 +24,11 @@ defmodule GrootTest do
   test "registers are replicated to connected nodes", %{nodes: nodes} do
     [n1, n2] = nodes
 
-    Groot.set(:key, "value")
+    Groot.set(TestGroot, :key, "value")
 
     eventually(fn ->
-      assert :rpc.call(n1, Groot, :get, [:key]) == "value"
-      assert :rpc.call(n2, Groot, :get, [:key]) == "value"
+      assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "value"
+      assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)
   end
 
@@ -31,20 +37,20 @@ defmodule GrootTest do
 
     Schism.partition([n1])
 
-    :rpc.call(n2, Groot, :set, [:key, "value"])
+    :rpc.call(n2, Groot, :set, [TestGroot, :key, "value"])
 
     eventually(fn ->
-      assert Groot.get(:key) == "value"
-      assert :rpc.call(n1, Groot, :get, [:key]) == nil
-      assert :rpc.call(n2, Groot, :get, [:key]) == "value"
+      assert Groot.get(TestGroot, :key) == "value"
+      assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == nil
+      assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)
 
     Schism.heal([n1, n2])
 
     eventually(fn ->
-      assert Groot.get(:key) == "value"
-      assert :rpc.call(n1, Groot, :get, [:key]) == "value"
-      assert :rpc.call(n2, Groot, :get, [:key]) == "value"
+      assert Groot.get(TestGroot, :key) == "value"
+      assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "value"
+      assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)
   end
 
@@ -53,28 +59,28 @@ defmodule GrootTest do
 
     Schism.partition([n1])
 
-    :rpc.call(n2, Groot, :set, [:key, "first"])
+    :rpc.call(n2, Groot, :set, [TestGroot, :key, "first"])
 
     eventually(fn ->
-      assert Groot.get(:key) == "first"
-      assert :rpc.call(n1, Groot, :get, [:key]) == nil
-      assert :rpc.call(n2, Groot, :get, [:key]) == "first"
+      assert Groot.get(TestGroot, :key) == "first"
+      assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == nil
+      assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "first"
     end)
 
-    :rpc.call(n1, Groot, :set, [:key, "second"])
+    :rpc.call(n1, Groot, :set, [TestGroot, :key, "second"])
 
     eventually(fn ->
-      assert Groot.get(:key) == "second"
-      assert :rpc.call(n1, Groot, :get, [:key]) == "second"
-      assert :rpc.call(n2, Groot, :get, [:key]) == "first"
+      assert Groot.get(TestGroot, :key) == "second"
+      assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "second"
+      assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "first"
     end)
 
     Schism.heal([n1, n2])
 
     eventually(fn ->
-      assert Groot.get(:key) == "second"
-      assert :rpc.call(n1, Groot, :get, [:key]) == "second"
-      assert :rpc.call(n2, Groot, :get, [:key]) == "second"
+      assert Groot.get(TestGroot, :key) == "second"
+      assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "second"
+      assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "second"
     end)
   end
 
