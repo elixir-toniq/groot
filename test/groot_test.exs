@@ -3,14 +3,13 @@ defmodule GrootTest do
   doctest Groot
 
   setup_all do
-    # Application.ensure_all_started(:groot)
     nodes = LocalCluster.start_nodes("groot", 2)
 
-    for node <- nodes do
-      :rpc.call(node, Groot, :start_link, [[name: TestGroot]])
-    end
-
     Groot.start_link(name: TestGroot)
+
+    for node <- nodes do
+      :rpc.block_call(node, Groot, :start_link, [[name: TestGroot]])
+    end
 
     {:ok, nodes: nodes}
   end
@@ -27,6 +26,7 @@ defmodule GrootTest do
     Groot.set(TestGroot, :key, "value")
 
     eventually(fn ->
+      assert Groot.get(TestGroot, :key) == "value"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "value"
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)

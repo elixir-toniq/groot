@@ -8,8 +8,6 @@ defmodule Groot.ClockSync do
 
   use GenServer
 
-  alias __MODULE__
-
   def start_link(args) do
     name = Keyword.fetch!(args, :name)
     GenServer.start_link(__MODULE__, args, name: server_name(name))

@@ -3,16 +3,12 @@ defmodule Groot.Register do
   # LWW Register.
 
   # Creates a new register
-  def new(key, val) do
-    {:ok, hlc} = HLClock.send_timestamp(Groot.Clock)
-
+  def new(key, val, hlc) do
     %{key: key, value: val, hlc: hlc}
   end
 
   # Updates the value and creates a new HLC for our register
-  def update(register, val) do
-    {:ok, hlc} = HLClock.send_timestamp(Groot.Clock)
-
+  def update(register, val, hlc) do
     %{register | value: val, hlc: hlc}
   end
 

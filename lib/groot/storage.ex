@@ -43,12 +43,19 @@ defmodule Groot.Storage do
     registers = %{}
     schedule_sync_timeout()
 
-    {:ok, %{name: name, registers: registers}}
+    data = %{
+      name: name,
+      clock: args[:clock],
+      registers: registers,
+    }
+
+    {:ok, data}
   end
 
   def handle_call({:set, key, value}, _from, data) do
-    registers = Map.update(data.registers, key, Register.new(key, value), fn reg ->
-      Register.update(reg, value)
+    {:ok, hlc} = HLClock.send_timestamp(data.clock)
+    registers = Map.update(data.registers, key, Register.new(key, value, hlc), fn reg ->
+      Register.update(reg, value, hlc)
     end)
     :ets.insert(data.name, {key, registers[key].value})
     GenServer.abcast(data.name, {:update_register, registers[key]})

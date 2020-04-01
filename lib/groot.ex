@@ -65,7 +65,7 @@ defmodule Groot do
 
   def start_link(opts) do
     name = opts[:name] || raise ArgumentError, "Groot requires a `:name` option"
-    Supervisor.start_link(__MODULE__, opts)
+    Supervisor.start_link(__MODULE__, opts, name: name)
   end
 
   def init(opts) do
@@ -79,7 +79,7 @@ defmodule Groot do
         sync_interval: 3_000,
         clock: clock_name(name),
       ]},
-      {Groot.Storage, [name: storage_name(name)]}
+      {Groot.Storage, [name: storage_name(name), clock: clock_name(name)]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
