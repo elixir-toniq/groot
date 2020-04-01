@@ -42,6 +42,30 @@ defmodule Groot do
 
   alias Groot.Storage
 
+  defmacro __using__(_opts) do
+    quote do
+      def child_spec(opts) do
+        %{
+          id: __MODULE__,
+          start: {__MODULE__, :start_link, opts},
+        }
+      end
+
+      def start_link(opts \\ []) do
+        opts = Keyword.put(opts, :name, __MODULE__)
+        Groot.start_link(opts)
+      end
+
+      def get(key) do
+        Groot.get(__MODULE__, key)
+      end
+
+      def set(key, value) do
+        Groot.set(__MODULE__, key, value)
+      end
+    end
+  end
+
   @doc """
   Gets a register's value. If the register is not found it returns `nil`.
   """

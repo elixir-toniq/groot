@@ -2,10 +2,14 @@ defmodule GrootTest do
   use ExUnit.Case
   doctest Groot
 
+  defmodule TestGroot do
+    use Groot
+  end
+
   setup_all do
     nodes = LocalCluster.start_nodes("groot", 2)
 
-    Groot.start_link(name: TestGroot)
+    TestGroot.start_link()
 
     for node <- nodes do
       :rpc.block_call(node, Groot, :start_link, [[name: TestGroot]])
@@ -23,10 +27,10 @@ defmodule GrootTest do
   test "registers are replicated to connected nodes", %{nodes: nodes} do
     [n1, n2] = nodes
 
-    Groot.set(TestGroot, :key, "value")
+    TestGroot.set(:key, "value")
 
     eventually(fn ->
-      assert Groot.get(TestGroot, :key) == "value"
+      assert TestGroot.get(:key) == "value"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "value"
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)
@@ -40,7 +44,7 @@ defmodule GrootTest do
     :rpc.call(n2, Groot, :set, [TestGroot, :key, "value"])
 
     eventually(fn ->
-      assert Groot.get(TestGroot, :key) == "value"
+      assert TestGroot.get(:key) == "value"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == nil
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)
@@ -48,7 +52,7 @@ defmodule GrootTest do
     Schism.heal([n1, n2])
 
     eventually(fn ->
-      assert Groot.get(TestGroot, :key) == "value"
+      assert TestGroot.get(:key) == "value"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "value"
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "value"
     end)
@@ -62,7 +66,7 @@ defmodule GrootTest do
     :rpc.call(n2, Groot, :set, [TestGroot, :key, "first"])
 
     eventually(fn ->
-      assert Groot.get(TestGroot, :key) == "first"
+      assert TestGroot.get(:key) == "first"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == nil
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "first"
     end)
@@ -70,7 +74,7 @@ defmodule GrootTest do
     :rpc.call(n1, Groot, :set, [TestGroot, :key, "second"])
 
     eventually(fn ->
-      assert Groot.get(TestGroot, :key) == "second"
+      assert TestGroot.get(:key) == "second"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "second"
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "first"
     end)
@@ -78,7 +82,7 @@ defmodule GrootTest do
     Schism.heal([n1, n2])
 
     eventually(fn ->
-      assert Groot.get(TestGroot, :key) == "second"
+      assert TestGroot.get(:key) == "second"
       assert :rpc.call(n1, Groot, :get, [TestGroot, :key]) == "second"
       assert :rpc.call(n2, Groot, :get, [TestGroot, :key]) == "second"
     end)
