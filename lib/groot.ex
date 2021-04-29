@@ -44,6 +44,7 @@ defmodule Groot do
   @doc """
   Gets a register's value. If the register is not found it returns `nil`.
   """
+  @spec get(term()) :: term() | nil
   def get(key) do
     Storage.get(key)
   end
@@ -51,6 +52,7 @@ defmodule Groot do
   @doc """
   Sets the value for a register.
   """
+  @spec set(term(), term()) :: :ok
   def set(key, value) do
     Storage.set(key, value)
   end
