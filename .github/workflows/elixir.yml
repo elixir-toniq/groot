@@ -72,8 +72,6 @@ jobs:
           _build
           priv/plts
         key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
-    - name: Run Credo
-      run: mix credo
     - name: Run Dialyzer
       run: mix dialyzer --no-check --halt-exit-status
 
