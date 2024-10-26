@@ -121,8 +121,8 @@ defmodule Groot.Storage do
         {:noreply, data}
 
       {:delete, key} ->
-        delete_record(key, data)
-        {:noreply, data}
+        registers = delete_record(key, data)
+        {:noreply, %{data | registers: registers}}
 
       _msg ->
         {:noreply, data}
