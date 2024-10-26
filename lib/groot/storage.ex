@@ -25,8 +25,19 @@ defmodule Groot.Storage do
   end
 
   # The main api for setting a keys value
-  def set(key, value) do
-    GenServer.call(__MODULE__, {:set, key, value})
+  def set(key, value, expires_in \\ nil) do
+    GenServer.call(__MODULE__, {:set, key, value, expires_in})
+  end
+
+  # The main api for deleting a key
+  def delete(key) do
+    case :ets.lookup(__MODULE__, key) do
+      [] ->
+        :ok
+
+      [{^key, _value}] ->
+        GenServer.call(__MODULE__, {:delete, key})
+    end
   end
 
   # Deletes all keys in the currently connected cluster. This is only
@@ -44,12 +55,25 @@ defmodule Groot.Storage do
     {:ok, %{table: tab, registers: registers}}
   end
 
-  def handle_call({:set, key, value}, _from, data) do
+  def handle_call({:set, key, value, expires_in}, _from, data) do
     registers = Map.update(data.registers, key, Register.new(key, value), fn reg ->
       Register.update(reg, value)
     end)
     :ets.insert(data.table, {key, registers[key].value})
     GenServer.abcast(__MODULE__, {:update_register, registers[key]})
+
+    case expires_in == nil do
+      true -> :ok
+      false -> Process.send_after(self(), {:delete, key}, expires_in)
+    end
+
+    {:reply, :ok, %{data | registers: registers}}
+  end
+
+  def handle_call({:delete, key}, _from, data) do
+    registers = Map.delete(data.registers, key)
+    :ets.delete(data.table, key)
+    GenServer.abcast(__MODULE__, {:propagate_delete, registers[key]})
 
     {:reply, :ok, %{data | registers: registers}}
   end
@@ -77,6 +101,12 @@ defmodule Groot.Storage do
     end
 
     {:noreply, %{data | registers: new_registers}}
+  end
+
+  def handle_cast({:propagate_delete, reg}, data) do
+    registers = Map.delete(data.registers, reg.key)
+    :ets.delete(data.table, reg.key)
+    {:noreply, %{data | registers: registers}}
   end
 
   def handle_info(msg, data) do
