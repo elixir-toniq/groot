@@ -62,9 +62,9 @@ defmodule Groot.Storage do
     :ets.insert(data.table, {key, registers[key].value})
     GenServer.abcast(__MODULE__, {:update_register, registers[key]})
 
-    case expires_in == nil do
-      true -> :ok
-      false -> Process.send_after(self(), {:delete, key}, expires_in)
+    case expires_in do
+       nil -> :ok
+       _ -> Process.send_after(self(), {:delete, key}, expires_in)
     end
 
     {:reply, :ok, %{data | registers: registers}}
