@@ -73,7 +73,7 @@ defmodule Groot.Storage do
   def handle_call({:delete, key}, _from, data) do
     registers = Map.delete(data.registers, key)
     :ets.delete(data.table, key)
-    GenServer.abcast(__MODULE__, {:propagate_delete, registers[key]})
+    GenServer.abcast(__MODULE__, {:propagate_delete, key})
 
     {:reply, :ok, %{data | registers: registers}}
   end
@@ -103,9 +103,9 @@ defmodule Groot.Storage do
     {:noreply, %{data | registers: new_registers}}
   end
 
-  def handle_cast({:propagate_delete, reg}, data) do
-    registers = Map.delete(data.registers, reg.key)
-    :ets.delete(data.table, reg.key)
+  def handle_cast({:propagate_delete, key}, data) do
+    registers = Map.delete(data.registers, key)
+    :ets.delete(data.table, key)
     {:noreply, %{data | registers: registers}}
   end
 
