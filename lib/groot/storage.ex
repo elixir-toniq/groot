@@ -120,8 +120,8 @@ defmodule Groot.Storage do
         schedule_sync_timeout()
         {:noreply, data}
 
-      :delete ->
-        GenServer.call(__MODULE__, {:delete, data})
+      {:delete, key} ->
+        GenServer.call(__MODULE__, {:delete, key})
         {:noreply, data}
 
       _msg ->
