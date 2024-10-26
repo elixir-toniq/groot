@@ -121,7 +121,7 @@ defmodule Groot.Storage do
         {:noreply, data}
 
       {:delete, key} ->
-        GenServer.call(__MODULE__, {:delete, key})
+        delete_record(key, data)
         {:noreply, data}
 
       _msg ->
@@ -144,5 +144,12 @@ defmodule Groot.Storage do
     keys
     |> Enum.map(fn key -> {key, Register.latest(r1[key], r2[key])} end)
     |> Enum.into(%{})
+  end
+
+  defp delete_record(key, data) do
+    registers = Map.delete(data.registers, key)
+    :ets.delete(data.table, key)
+    GenServer.abcast(__MODULE__, {:propagate_delete, key})
+    registers
   end
 end
