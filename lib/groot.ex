@@ -52,9 +52,16 @@ defmodule Groot do
   @doc """
   Sets the value for a register.
   """
-  @spec set(term(), term()) :: :ok
-  def set(key, value) do
-    Storage.set(key, value)
+  @spec set(term(), term(), term() | nil) :: :ok
+  def set(key, value, expires_in \\ nil) do
+    Storage.set(key, value, expires_in)
+  end
+
+  @doc """
+  Deletes a register
+  """
+  @spec delete(term()) :: :ok
+  def delete(key) do
+    Storage.delete(key)
   end
 end
-
