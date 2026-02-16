@@ -25,8 +25,19 @@ defmodule Groot.Storage do
   end
 
   # The main api for setting a keys value
-  def set(key, value) do
-    GenServer.call(__MODULE__, {:set, key, value})
+  def set(key, value, expires_in \\ nil) do
+    GenServer.call(__MODULE__, {:set, key, value, expires_in})
+  end
+
+  # The main api for deleting a key
+  def delete(key) do
+    case :ets.lookup(__MODULE__, key) do
+      [] ->
+        :ok
+
+      [{^key, _value}] ->
+        GenServer.call(__MODULE__, {:delete, key})
+    end
   end
 
   # Deletes all keys in the currently connected cluster. This is only
@@ -44,12 +55,25 @@ defmodule Groot.Storage do
     {:ok, %{table: tab, registers: registers}}
   end
 
-  def handle_call({:set, key, value}, _from, data) do
+  def handle_call({:set, key, value, expires_in}, _from, data) do
     registers = Map.update(data.registers, key, Register.new(key, value), fn reg ->
       Register.update(reg, value)
     end)
     :ets.insert(data.table, {key, registers[key].value})
     GenServer.abcast(__MODULE__, {:update_register, registers[key]})
+
+    case expires_in do
+       nil -> :ok
+       _ -> Process.send_after(self(), {:delete, key}, expires_in)
+    end
+
+    {:reply, :ok, %{data | registers: registers}}
+  end
+
+  def handle_call({:delete, key}, _from, data) do
+    registers = Map.delete(data.registers, key)
+    :ets.delete(data.table, key)
+    GenServer.abcast(__MODULE__, {:propagate_delete, key})
 
     {:reply, :ok, %{data | registers: registers}}
   end
@@ -79,6 +103,12 @@ defmodule Groot.Storage do
     {:noreply, %{data | registers: new_registers}}
   end
 
+  def handle_cast({:propagate_delete, key}, data) do
+    registers = Map.delete(data.registers, key)
+    :ets.delete(data.table, key)
+    {:noreply, %{data | registers: registers}}
+  end
+
   def handle_info(msg, data) do
     case msg do
       {:nodeup, node} ->
@@ -89,6 +119,10 @@ defmodule Groot.Storage do
         GenServer.abcast(__MODULE__, {:update_registers, data.registers})
         schedule_sync_timeout()
         {:noreply, data}
+
+      {:delete, key} ->
+        registers = delete_record(key, data)
+        {:noreply, %{data | registers: registers}}
 
       _msg ->
         {:noreply, data}
@@ -110,5 +144,12 @@ defmodule Groot.Storage do
     keys
     |> Enum.map(fn key -> {key, Register.latest(r1[key], r2[key])} end)
     |> Enum.into(%{})
+  end
+
+  defp delete_record(key, data) do
+    registers = Map.delete(data.registers, key)
+    :ets.delete(data.table, key)
+    GenServer.abcast(__MODULE__, {:propagate_delete, key})
+    registers
   end
 end
